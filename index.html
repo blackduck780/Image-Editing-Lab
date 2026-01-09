@@ -35,11 +35,19 @@ body {font-family:'Courier New',monospace;background:#0a0a0a;color:#fff;padding:
     <div class="logo">🔒 LAB STUDIO v6.1 - FIXED</div>
     
     <div class="upload-zone" id="uploadZone">
-        <div style="font-size:2.5em;margin-bottom:10px;">🖼️</div>
-        <div style="font-size:1.1em;margin-bottom:15px;">Drag & drop image</div>
-        <label for="fileInput" class="upload-btn">UPLOAD IMAGE</label>
-        <input type="file" id="fileInput" accept="image/*">
+   <!-- REPLACE canvas section with this -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+    <div style="text-align:center;">
+        <div style="color:#666;margin-bottom:10px;">ORIGINAL</div>
+        <canvas id="originalCanvas" width="400" height="300" 
+                style="border:2px solid #666;border-radius:10px;"></canvas>
     </div>
+    <div style="text-align:center;">
+        <div style="color:#00ff88;margin-bottom:10px;">YOUR EDITS → LIVE</div>
+        <canvas id="editorCanvas" width="400" height="300" 
+                style="border:2px solid #00ff88;border-radius:10px;"></canvas>
+    </div>
+            </div>
     
     <div class="tools-bar">
         <button class="tool-btn active" onclick="selectTool('select',this)">Select</button>
