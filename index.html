@@ -1,384 +1,276 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>🔒 RED-EYE Enterprise Secure Resizer v5.0 - LAB EDITION</title>
+<title>🔒 LAB STUDIO v6.0 - Erase + Stickers</title>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-/* PERFORMANCE-OPTIMIZED DARK NEON THEME - NO LAG */
-* {margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none;}
-:root {
-    --bg-primary: #0a0a0a;
-    --neon-green: #00ff88;
-    --neon-purple: #ff00ff;
-    --neon-blue: #00d4ff;
-    --text-primary: #ffffff;
-    --text-muted: #94a3b8;
-}
-
+* {margin:0;padding:0;box-sizing:border-box;}
 body {
-    font-family:'Courier New', monospace;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    padding: 20px;
-    overflow-x: hidden; /* FIXED: Prevent horizontal scroll lag */
-    scroll-behavior: smooth; /* Smooth scrolling */
+    font-family:'Courier New',monospace;
+    background:#0a0a0a;color:#fff;padding:15px;line-height:1.4;
 }
-
-/* FIXED: Removed heavy animations & backdrop-filter */
 .container {
-    max-width: 1400px;
-    margin: 0 auto;
-    background: rgba(10,10,10,0.98);
-    border-radius: 20px;
-    padding: 30px;
-    border: 1px solid rgba(0,255,136,0.3);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    position: relative;
+    max-width:1100px;margin:0 auto;background:rgba(15,15,35,0.95);
+    border-radius:15px;padding:25px;border:1px solid #00ff88;
 }
-
-.container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--neon-green), var(--neon-purple));
-    border-radius: 20px 20px 0 0;
-}
-
 .logo {
-    font-size: 3em;
-    background: linear-gradient(45deg, var(--neon-green), var(--neon-blue));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-align: center;
-    font-weight: 800;
-    margin-bottom: 15px;
+    font-size:2em;background:linear-gradient(45deg,#00ff88,#ff00ff);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    text-align:center;margin-bottom:15px;
 }
-
-.tagline {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 1.2em;
-    margin-bottom: 30px;
+.upload-zone {
+    border:2px dashed #00ff88;border-radius:12px;padding:25px;
+    text-align:center;cursor:pointer;transition:all 0.2s;
+    margin:20px 0;background:rgba(0,255,136,0.05);
 }
-
-/* FIXED: Lightweight hover effects */
-.upload-zone, .pixlab-zone {
-    border: 2px dashed rgba(0,255,136,0.6);
-    border-radius: 16px;
-    padding: 40px 20px;
-    text-align: center;
-    margin-bottom: 25px;
-    background: rgba(0,255,136,0.05);
-    transition: all 0.3s ease;
-    cursor: pointer;
+.upload-zone:hover,.upload-zone.dragover {
+    background:rgba(0,255,136,0.15);border-color:#00ff88;
 }
-
-.pixlab-zone {
-    border-color: rgba(255,0,255,0.6);
-    background: rgba(255,0,255,0.05);
+#fileInput {display:none;}
+.upload-btn {
+    background:linear-gradient(135deg,#00ff88,#00d4ff);color:#000;
+    border:none;padding:12px 25px;border-radius:25px;font-weight:700;
+    cursor:pointer;font-size:1em;
 }
-
-.upload-zone:hover, .pixlab-zone:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,255,136,0.2);
+.tools-bar {
+    display:flex;flex-wrap:wrap;gap:10px;margin:20px 0;
+    background:rgba(255,255,255,0.05);padding:15px;border-radius:10px;
 }
-
-.upload-zone.dragover {
-    border-color: var(--neon-green);
-    background: rgba(0,255,136,0.15);
+.tool-btn {
+    background:#333;padding:8px 15px;border:none;border-radius:20px;
+    color:#fff;cursor:pointer;font-size:0.9em;transition:all 0.2s;
 }
-
-.pixlab-zone.dragover {
-    border-color: var(--neon-purple);
-    background: rgba(255,0,255,0.15);
+.tool-btn.active {background:linear-gradient(135deg,#00ff88,#ff00ff);}
+.tool-btn:hover {background:#00ff88;transform:translateY(-1px);}
+.controls {
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    gap:15px;margin:20px 0;
 }
-
-#fileInput, #pixlabInput { display: none; }
-
-.upload-btn, .pixlab-btn {
-    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
-    color: #000;
-    padding: 15px 35px;
-    border-radius: 30px;
-    cursor: pointer;
-    font-weight: 700;
-    font-size: 1.1em;
-    border: none;
-    margin: 10px;
-    transition: all 0.3s ease;
+.control {
+    background:rgba(255,255,255,0.05);padding:12px;border-radius:8px;
 }
-
-.pixlab-btn {
-    background: linear-gradient(135deg, var(--neon-purple), #ff9500);
+.control label {display:block;margin-bottom:5px;color:#94a3b8;font-size:0.9em;}
+.control input,.control select {
+    width:100%;background:rgba(0,0,0,0.5);border:1px solid #00ff88;
+    border-radius:5px;padding:8px;color:#fff;font-family:inherit;
 }
-
-.upload-btn:hover, .pixlab-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(0,255,136,0.3);
+#editorCanvas {
+    border:2px solid #00ff88;border-radius:10px;max-width:100%;
+    cursor:crosshair;background:#000;display:none;
 }
-
-.dimension-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 25px;
+.preview {
+    display:grid;grid-template-columns:1fr;gap:15px;margin-top:20px;
 }
-
-.dimension-input {
-    background: rgba(255,255,255,0.08);
-    border: 2px solid rgba(0,255,136,0.3);
-    border-radius: 12px;
-    padding: 15px;
-    color: var(--text-primary);
-    font-size: 1.2em;
-    font-weight: 600;
+.stickers {
+    display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:10px 0;
 }
-
-.dimension-input:focus {
-    outline: none;
-    border-color: var(--neon-green);
-    box-shadow: 0 0 10px rgba(0,255,136,0.3);
+.sticker {
+    width:45px;height:45px;border-radius:8px;background:#333;
+    border:2px solid #666;cursor:pointer;font-size:1.5em;display:flex;
+    align-items:center;justify-content:center;transition:all 0.2s;
 }
-
-.process-btn {
-    background: linear-gradient(135deg, var(--neon-green), var(--neon-purple));
-    color: #000;
-    border: none;
-    padding: 18px 40px;
-    border-radius: 40px;
-    font-size: 1.3em;
-    font-weight: 800;
-    cursor: pointer;
-    width: 100%;
-    transition: all 0.3s ease;
-}
-
-.process-btn:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 15px 35px rgba(0,255,136,0.4);
-}
-
-.process-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
+.sticker:hover {border-color:#00ff88;transform:scale(1.1);}
 #status {
-    padding: 15px 25px;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: 600;
-    margin: 20px 0;
-    border: 1px solid rgba(0,255,136,0.3);
-    background: rgba(0,255,136,0.1);
+    padding:12px;border-radius:8px;text-align:center;
+    border:1px solid #00ff88;background:rgba(0,255,136,0.1);
+    margin:15px 0;
 }
-
-.status-success { border-color: var(--neon-green); background: rgba(0,255,136,0.2); }
-.status-error { border-color: #ff4444; background: rgba(255,68,68,0.2); }
-.status-processing { border-color: #ff9500; background: rgba(255,149,0,0.2); }
-
-.pixlab-result {
-    background: rgba(255,255,255,0.05);
-    border-radius: 16px;
-    padding: 25px;
-    border: 1px solid rgba(0,255,136,0.2);
-    margin-top: 25px;
-}
-
-.pixlab-canvas {
-    max-width: 100%;
-    border-radius: 12px;
-    border: 2px solid var(--neon-green);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-}
-
 .download-btn {
-    display: inline-block;
-    background: linear-gradient(135deg, var(--neon-purple), #ff9500);
-    color: #000;
-    padding: 15px 35px;
-    border-radius: 30px;
-    text-decoration: none;
-    font-weight: 700;
-    margin: 20px 10px 0;
+    background:linear-gradient(135deg,#ff00ff,#00ff88);color:#000;
+    border:none;padding:15px 30px;border-radius:25px;font-weight:700;
+    cursor:pointer;font-size:1.1em;display:block;margin:15px auto;
 }
-
-@media (max-width: 768px) {
-    .dimension-controls { grid-template-columns: 1fr 1fr; }
-    .container { padding: 20px; margin: 10px; }
-}
+@media (min-width:900px) {.preview{grid-template-columns:1fr 1fr;}}
+@media (max-width:768px) {.tools-bar{flex-direction:column;}}
 </style>
 </head>
 <body>
 <div class="container">
-    <div class="logo">🔒 RED-EYE v5.0</div>
-    <div class="tagline">Enterprise Secure Resizer • LAB AI Edition</div>
+    <div class="logo">🔒 LAB STUDIO v6.0</div>
+    <div style="text-align:center;color:#94a3b8;margin-bottom:20px;">
+        AI Editor • Erase • Stickers • DOS Proof
+    </div>
     
     <div class="upload-zone" id="uploadZone">
-        <div style="font-size:3em;margin-bottom:15px;">🖼️</div>
-        <div style="font-size:1.3em;margin-bottom:20px;">Drag & drop image</div>
-        <label for="fileInput" class="upload-btn">SELECT IMAGE</label>
+        <div style="font-size:2.5em;margin-bottom:10px;">🖼️</div>
+        <div style="font-size:1.1em;margin-bottom:15px;">Drag & drop image</div>
+        <label for="fileInput" class="upload-btn">UPLOAD IMAGE</label>
         <input type="file" id="fileInput" accept="image/*">
     </div>
     
-    <div class="dimension-controls">
-        <div><label>Width</label><input type="number" id="width" value="600" min="1" max="4096" class="dimension-input"></div>
-        <div><label>Height</label><input type="number" id="height" value="400" min="1" max="4096" class="dimension-input"></div>
-        <div><label>Max KB</label><input type="number" id="maxKB" value="100" min="1" max="5000" class="dimension-input"></div>
-        <div style="display:flex;align-items:end;gap:10px;">
-            <label style="font-size:0.9em;">Exact</label>
-            <input type="checkbox" id="exactSize">
+    <div class="tools-bar" id="toolsBar">
+        <button class="tool-btn" data-tool="select">Select</button>
+        <button class="tool-btn" data-tool="erase">🧽 Erase</button>
+        <button class="tool-btn" data-tool="brush">✏️ Brush</button>
+        <button class="tool-btn" data-tool="sticker">🎨 Stickers</button>
+    </div>
+    
+    <div class="controls">
+        <div class="control">
+            <label>Width</label><input type="number" id="width" value="800">
+        </div>
+        <div class="control">
+            <label>Height</label><input type="number" id="height" value="600">
+        </div>
+        <div class="control">
+            <label>Filter</label>
+            <select id="filter">
+                <option value="none">None</option>
+                <option value="enhance">Enhance</option>
+                <option value="vintage">Vintage</option>
+            </select>
+        </div>
+        <div class="control">
+            <label>Brightness</label>
+            <input type="range" id="brightness" min="0" max="200" value="100">
         </div>
     </div>
     
-    <button class="process-btn" onclick="processImage()" id="processBtn">🚀 PROCESS LAB AI</button>
-    <div id="status">🔒 Ready - LAB Edition v5.0</div>
-    <div id="preview"></div>
+    <canvas id="editorCanvas" width="800" height="600"></canvas>
+    
+    <div class="stickers" id="stickers" style="display:none;">
+        <div class="sticker" data-sticker="⭐">⭐</div>
+        <div class="sticker" data-sticker="❤️">❤️</div>
+        <div class="sticker" data-sticker="🔥">🔥</div>
+        <div class="sticker" data-sticker="⚡">⚡</div>
+        <div class="sticker" data-sticker="🎉">🎉</div>
+        <div class="sticker" data-sticker="👻">👻</div>
+    </div>
+    
+    <div id="status">Ready - Drag image to start</div>
+    <button class="download-btn" onclick="downloadResult()" id="downloadBtn" style="display:none;">
+        💾 DOWNLOAD RESULT
+    </button>
 </div>
 
 <script>
-let originalImg = null;
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+let canvas, ctx, originalImg, currentTool='select', isDrawing=false;
+let stickers=[], eraseSize=20, brushSize=10;
 
-document.addEventListener('DOMContentLoaded', () => {
-    const uploadZone = document.getElementById('uploadZone');
-    const fileInput = document.getElementById('fileInput');
-    
-    // Drag & Drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-        uploadZone.addEventListener(event, e => e.preventDefault());
-    });
-    
-    ['dragenter', 'dragover'].forEach(event => {
-        uploadZone.addEventListener(event, () => uploadZone.classList.add('dragover'));
-    });
-    
-    ['dragleave', 'drop'].forEach(event => {
-        uploadZone.addEventListener(event, () => uploadZone.classList.remove('dragover'));
-    });
-    
-    uploadZone.addEventListener('drop', e => {
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            showPreview(files[0]);
-        }
-    });
-    
-    fileInput.addEventListener('change', e => {
-        if (e.target.files.length > 0) showPreview(e.target.files[0]);
-    });
-});
+document.addEventListener('DOMContentLoaded', init);
 
-function setStatus(msg, type = 'info') {
-    const status = document.getElementById('status');
-    status.textContent = msg;
-    status.className = type;
+function init() {
+    canvas=document.getElementById('editorCanvas');
+    ctx=canvas.getContext('2d');
+    
+    // Drag & drop
+    const zone=document.getElementById('uploadZone');
+    const input=document.getElementById('fileInput');
+    
+    ['dragenter','dragover'].forEach(e=>zone.addEventListener(e,()=>zone.classList.add('dragover')));
+    ['dragleave','drop'].forEach(e=>zone.addEventListener(e,()=>zone.classList.remove('dragover')));
+    zone.addEventListener('drop',e=>{
+        e.preventDefault();
+        if(e.dataTransfer.files[0]) input.files=e.dataTransfer.files;
+    });
+    
+    input.addEventListener('change',e=>loadImage(e.target.files[0]));
+    
+    // Tools
+    document.querySelectorAll('.tool-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>selectTool(btn.dataset.tool));
+    });
+    
+    // Stickers
+    document.querySelectorAll('.sticker').forEach(sticker=>{
+        sticker.addEventListener('click',()=>addSticker(sticker.dataset.sticker));
+    });
+    
+    // Canvas events
+    canvas.addEventListener('mousedown',startDraw);
+    canvas.addEventListener('mousemove',draw);
+    canvas.addEventListener('mouseup',stopDraw);
+    canvas.addEventListener('mouseout',stopDraw);
 }
 
-async function showPreview(file) {
-    if (file.size > MAX_FILE_SIZE) {
-        setStatus('❌ Max 15MB', 'error');
-        return;
-    }
+function selectTool(tool) {
+    currentTool=tool;
+    document.querySelectorAll('.tool-btn').forEach(btn=>btn.classList.remove('active'));
+    event.target.classList.add('active');
     
-    const reader = new FileReader();
-    reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-            originalImg = img;
-            setStatus('✅ Image loaded');
+    document.getElementById('stickers').style.display=tool==='sticker'?'grid':'none';
+    setStatus(`Tool: ${tool}`);
+}
+
+function loadImage(file) {
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+        originalImg=new Image();
+        originalImg.onload=()=>{
+            canvas.width=canvas.clientWidth;
+            canvas.height=canvas.clientHeight;
+            ctx.drawImage(originalImg,0,0,canvas.width,canvas.height);
+            canvas.style.display='block';
+            document.getElementById('downloadBtn').style.display='block';
+            setStatus('Image loaded - start editing!');
         };
-        img.src = e.target.result;
+        originalImg.src=e.target.result;
     };
     reader.readAsDataURL(file);
 }
 
-function addWatermark(ctx, canvas) {
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#00ff88';
-    ctx.font = 'bold 20px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('RED-EYE.LAB.v5', canvas.width / 2, 30);
-    ctx.fillText('©2026', canvas.width / 2, canvas.height - 20);
-    ctx.restore();
+function startDraw(e) {
+    isDrawing=true;
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*canvas.width/rect.width;
+    const y=(e.clientY-rect.top)*canvas.height/rect.height;
+    
+    if(currentTool==='erase') {
+        ctx.globalCompositeOperation='destination-out';
+        ctx.lineWidth=eraseSize;
+        ctx.lineCap='round';
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+    } else if(currentTool==='brush') {
+        ctx.globalCompositeOperation='source-over';
+        ctx.strokeStyle='#00ff88';
+        ctx.lineWidth=brushSize;
+        ctx.lineCap='round';
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+    }
 }
 
-async function processImage() {
-    if (!originalImg) {
-        setStatus('⚠️ Select image first', 'error');
-        return;
+function draw(e) {
+    if(!isDrawing) return;
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*canvas.width/rect.width;
+    const y=(e.clientY-rect.top)*canvas.height/rect.height;
+    
+    if(currentTool==='erase' || currentTool==='brush') {
+        ctx.lineTo(x,y);
+        ctx.stroke();
     }
-    
-    const processBtn = document.getElementById('processBtn');
-    const preview = document.getElementById('preview');
-    
-    processBtn.disabled = true;
-    processBtn.textContent = '🔄 PROCESSING...';
-    setStatus('🔄 LAB AI Processing...', 'processing');
-    preview.innerHTML = '';
-    
-    try {
-        const targetW = parseInt(document.getElementById('width').value);
-        const targetH = parseInt(document.getElementById('height').value);
-        const maxKB = parseInt(document.getElementById('maxKB').value) * 1024;
-        const exactSize = document.getElementById('exactSize').checked;
-        
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        if (exactSize) {
-            canvas.width = targetW;
-            canvas.height = targetH;
-        } else {
-            const ratio = Math.min(targetW / originalImg.width, targetH / originalImg.height);
-            canvas.width = Math.floor(originalImg.width * ratio);
-            canvas.height = Math.floor(originalImg.height * ratio);
-        }
-        
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(originalImg, 0, 0, canvas.width, canvas.height);
-        
-        addWatermark(ctx, canvas);
-        
-        preview.innerHTML = `
-            <div class="pixlab-result">
-                <h3 style="color:var(--neon-green);margin-bottom:15px;">✅ LAB AI COMPLETE</h3>
-                <canvas id="resultCanvas" class="pixlab-canvas"></canvas>
-                <div style="text-align:center;margin:20px 0;">
-                    <a id="downloadBtn" class="download-btn" href="#" download="lab-processed.png">💾 DOWNLOAD LAB AI</a>
-                </div>
-                <div style="font-size:1em;text-align:center;">
-                    ${originalImg.width}×${originalImg.height} → 
-                    <strong style="color:var(--neon-green);">${canvas.width}×${canvas.height}</strong> | 
-                    ${Math.round(canvas.toDataURL().length * 0.0009 / 1024)}KB
-                </div>
-            </div>
-        `;
-        
-        const resultCanvas = document.getElementById('resultCanvas');
-        resultCanvas.width = canvas.width;
-        resultCanvas.height = canvas.height;
-        resultCanvas.getContext('2d').drawImage(canvas, 0, 0);
-        
-        const dataURL = canvas.toDataURL('image/png', 0.9);
-        const downloadBtn = document.getElementById('downloadBtn');
-        downloadBtn.href = dataURL;
-        downloadBtn.download = `RED-EYE_LAB_${canvas.width}x${canvas.height}.png`;
-        
-        setStatus(`✅ Complete: ${canvas.width}×${canvas.height} | ${Math.round(canvas.toDataURL().length * 0.0009 / 1024)}KB`, 'success');
-    } catch (e) {
-        setStatus('❌ Error: ' + e.message, 'error');
+}
+
+function stopDraw() {
+    if(isDrawing && (currentTool==='erase' || currentTool==='brush')) {
+        ctx.globalCompositeOperation='source-over';
     }
-    
-    processBtn.disabled = false;
-    processBtn.textContent = '🚀 PROCESS LAB AI';
+    isDrawing=false;
+}
+
+function addSticker(emoji) {
+    const x=Math.random()*canvas.width*0.7;
+    const y=Math.random()*canvas.height*0.7;
+    ctx.font='48px Arial';
+    ctx.textAlign='center';
+    ctx.fillText(emoji,x,y);
+    stickers.push({emoji,x,y});
+}
+
+function setStatus(msg) {
+    document.getElementById('status').textContent=msg;
+}
+
+function downloadResult() {
+    const link=document.createElement('a');
+    link.download='lab-studio-v6.png';
+    link.href=canvas.toDataURL();
+    link.click();
 }
 </script>
 </body>
-    </html>
+                                           </html>
