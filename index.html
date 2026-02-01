@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeonCode AI v2.0 - REAL AI Code Gen</title>
+    <script src="https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"></script>
+    <style>
+        :root {
+            --bg: #0a0a0a; --bg-sec: #1a1a1a; --text: #e0e0e0;
+            --neon-cyan: #00ff88; --neon-magenta: #ff00ff; --neon-yellow: #ffff00;
+            --glow-cyan: 0 0 15px #00ff88, 0 0 30px #00ff88aa;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace; background: var(--bg); color: var(--text);
+            overflow: hidden; position: relative;
+        }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(0,255,136,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,0,255,0.08) 0%, transparent 50%);
+            pointer-events: none; z-index: -1;
+        }
+        .container { display: flex; height: 100vh; }
+        .left { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .right { flex: 1; border-left: 2px solid var(--neon-cyan); position: relative; }
+        textarea { 
+            flex: 1; resize: none; background: var(--bg-sec); border: 1px solid var(--neon-cyan); 
+            color: var(--text); padding: 15px; font-size: 14px; font-family: inherit;
+            box-shadow: var(--glow-cyan); transition: all 0.3s;
+        }
+        textarea:focus { outline: none; box-shadow: var(--glow-cyan), 0 0 20px #00ff88; }
+        button { 
+            background: linear-gradient(45deg, var(--bg-sec), #2a2a2a); 
+            color: var(--neon-cyan); border: 1px solid var(--neon-cyan); padding: 12px 24px; 
+            cursor: pointer; font-family: inherit; font-weight: bold; text-transform: uppercase;
+            transition: all 0.3s; letter-spacing: 1px;
+        }
+        button:hover:not(:disabled) { 
+            background: var(--neon-cyan); color: var(--bg); box-shadow: var(--glow-cyan); transform: translateY(-2px);
+        }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status { 
+            background: var(--bg-sec); padding: 12px; border-radius: 4px; border-left: 4px solid var(--neon-yellow);
+            font-size: 13px; min-height: 20px;
+        }
+        .preview-iframe { width: 100%; height: 100%; border: none; }
+        h1 { 
+            font-size: 28px; text-shadow: var(--glow-cyan); 
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-magenta), var(--neon-yellow));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: glowShift 3s ease-in-out infinite;
+        }
+        @keyframes glowShift {
+            0%, 100% { filter: hue-rotate(0deg); }
+            50% { filter: hue-rotate(90deg); }
+        }
+        .output-box { 
+            background: var(--bg-sec); border: 1px solid var(--neon-magenta); padding: 15px; 
+            font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; border-radius: 4px;
+            box-shadow: inset 0 0 15px rgba(255,0,255,0.1);
+        }
+        .ai-status { color: var(--neon-yellow); font-weight: bold; }
+        @media (max-width: 768px) { .container { flex-direction: column; } .right { height: 50vh; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <h1>🧠 NeonCode AI v2.0</h1>
+            <textarea id="prompt" placeholder="Describe your website: 'Create cyberpunk portfolio with neon navbar, dark theme, contact form, responsive'"></textarea>
+            <button id="generateBtn" onclick="generateCode()">🚀 GENERATE WITH AI</button>
+            <div id="status" class="status">Ready. Loading AI model... (first time takes ~30s)</div>
+            <div><strong>📝 AI Prompt:</strong></div>
+            <div id="promptOut" class="output-box">AI will show optimized prompt here...</div>
+            <div><strong>💾 Generated Code:</strong></div>
+            <div id="codeOut" class="output-box">// AI code appears here</div>
+        </div>
+        <div class="right">
+            <iframe id="previewFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        let generator = null;
+        let isGenerating = false;
+        const statusEl = document.getElementById('status');
+        const btn = document.getElementById('generateBtn');
+
+        // Load AI model once
+        async function loadModel() {
+            statusEl.innerHTML = '⚡ Loading CodeGen AI model... (~90MB, one-time)';
+            try {
+                generator = await Xenova.pipeline('text-generation', 'Xenova/codegen-350M-multi');
+                statusEl.innerHTML = '✅ AI Ready! Describe your website above.';
+                btn.disabled = false;
+            } catch(e) {
+                statusEl.innerHTML = '❌ Model failed. Using template fallback.';
+                btn.disabled = false;
+            }
+        }
+
+        async function generateCode() {
+            if (isGenerating) return;
+            isGenerating = true;
+            btn.disabled = true;
+            const userPrompt = document.getElementById('prompt').value.trim();
+            
+            if (!userPrompt) {
+                statusEl.textContent = 'Enter a website description first!';
+                isGenerating = false;
+                btn.disabled = false;
+                return;
+            }
+
+            statusEl.innerHTML = '🤖 AI Thinking... (3-10s)';
+            
+            // Enhanced prompt for better code
+            const aiPrompt = `/* Generate COMPLETE single-file HTML/CSS/JS website */
+# Instructions: ${userPrompt}
+
+Requirements:
+- Single HTML file, responsive, mobile-first
+- Modern cyberpunk/neon dark theme  
+- Semantic HTML5, clean CSS, vanilla JS
+- Professional production-ready code
+
+${'<html><head><title>Generated Site</title></head><body>'}`;
+
+            document.getElementById('promptOut').textContent = aiPrompt;
+
+            try {
+                if (generator) {
+                    // REAL AI GENERATION
+                    const output = await generator(aiPrompt, {
+                        max_new_tokens: 800,
+                        temperature: 0.3,
+                        do_sample: true,
+                        pad_token_id: 50256
+                    });
+                    
+                    let generatedCode = output[0].generated_text;
+                    
+                    // Clean up AI output
+                    generatedCode = generatedCode.replace(aiPrompt, '').trim();
+                    if (!generatedCode.startsWith('<!DOCTYPE')) {
+                        generatedCode = `<!DOCTYPE html><html><head><title>AI Generated</title><style>:root{--bg:#0a0a0a;--neon:#00ff88;}body{background:var(--bg);color:#fff;font-family:monospace;padding:2em;}</style></head><body>${generatedCode}</body></html>`;
+                    }
+                    
+                    document.getElementById('codeOut').textContent = generatedCode;
+                    document.getElementById('previewFrame').srcdoc = generatedCode;
+                    statusEl.innerHTML = '<span class="ai-status">🎉 AI GENERATED LIVE WEBSITE!</span>';
+                } else {
+                    // Template fallback
+                    statusEl.textContent = 'Using smart templates (AI unavailable)';
+                    const templates = {
+                        portfolio: `<!DOCTYPE html><html><head><title>Portfolio</title><style>:root{--bg:#000;--neon:#00ff88;}body{background:var(--bg);color:var(--neon);font-family:monospace;padding:2em;}h1{text-shadow:0 0 20px var(--neon);}.card{background:rgba(255,255,255,0.1);padding:2em;border:1px solid var(--neon);border-radius:10px;}</style></head><body><h1>Portfolio</h1><div class="card">Your projects here</div></body></html>`,
+                        landing: `<!DOCTYPE html><html><head><title>Landing</title><style>body{height:100vh;margin:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#00ff88,#ff00ff);font-family:monospace;color:#fff;font-size:3em;text-shadow:0 0 30px #fff;}</style></head><body>Welcome to ${userPrompt}</body></html>`
+                    };
+                    const code = userPrompt.includes('portfolio') ? templates.portfolio : templates.landing;
+                    document.getElementById('codeOut').textContent = code;
+                    document.getElementById('previewFrame').srcdoc = code;
+                }
+            } catch(e) {
+                statusEl.textContent = 'Fallback mode activated';
+                // Use template as backup
+                document.getElementById('codeOut').textContent = `<!DOCTYPE html><html><head><title>Backup</title><style>body{font-family:monospace;padding:2em;background:#111;color:#00ff88;}</style></head><body><h1>AI temporarily unavailable</h1><p>Try: ${userPrompt}</p></body></html>`;
+                document.getElementById('previewFrame').srcdoc = document.getElementById('codeOut').textContent;
+            }
+            
+            isGenerating = false;
+            btn.disabled = false;
+        }
+
+        // Auto-load model on page load
+        loadModel();
+        
+        // Enter key support
+        document.getElementById('prompt').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) generateCode();
+        });
+    </script>
+</body>
+  </html>
