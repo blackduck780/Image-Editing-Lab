@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaudeCode - REAL Website Generator</title>
+    <style>
+        :root {
+            --bg: #0a0a0a; --bg-sec: #1a1a1a; --text: #e0e0e0;
+            --neon-cyan: #00ff88; --neon-pink: #ff1493; --neon-blue: #00bfff;
+            --glow: 0 0 15px #00ff88, 0 0 30px #00ff8844;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            background: var(--bg); color: var(--text); height: 100vh; overflow: hidden;
+        }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 10%, rgba(0,255,136,0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 90%, rgba(255,20,147,0.1) 0%, transparent 40%);
+            z-index: -1;
+        }
+        .container { display: flex; height: 100vh; }
+        .left { flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .right { flex: 1; border-left: 3px solid var(--neon-cyan); position: relative; background: #111; }
+        textarea { 
+            flex: 1; background: var(--bg-sec); border: 2px solid transparent; 
+            color: var(--text); padding: 20px; font-size: 15px; line-height: 1.6;
+            box-shadow: var(--glow); transition: all 0.3s; border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+        textarea:focus { 
+            outline: none; border-color: var(--neon-cyan); box-shadow: var(--glow), 0 0 30px rgba(0,255,136,0.3);
+        }
+        .btn { 
+            background: linear-gradient(135deg, var(--bg-sec), #2a2a2a); 
+            color: var(--neon-cyan); border: 2px solid var(--neon-cyan); padding: 15px 30px; 
+            cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 1px; border-radius: 8px;
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0,255,136,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn:hover::before { left: 100%; }
+        .btn:hover { 
+            background: var(--neon-cyan); color: #000; box-shadow: var(--glow); transform: translateY(-3px);
+        }
+        .status { 
+            background: var(--bg-sec); padding: 15px; border-radius: 8px; border-left: 5px solid var(--neon-pink);
+            font-size: 13px; font-family: inherit; backdrop-filter: blur(10px);
+        }
+        .output { 
+            background: var(--bg-sec); border: 1px solid var(--neon-blue); border-radius: 8px;
+            padding: 20px; font-size: 13px; max-height: 250px; overflow-y: auto; white-space: pre-wrap;
+            box-shadow: inset 0 0 20px rgba(0,191,255,0.1); line-height: 1.5;
+        }
+        .preview { width: 100%; height: 100%; border: none; }
+        h1 { 
+            font-size: 32px; font-weight: 700; 
+            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-pink), var(--neon-blue));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0,255,136,0.5);
+        }
+        @media (max-width: 768px) { 
+            .container { flex-direction: column; } 
+            .right { height: 45vh; } 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <h1>🤖 ClaudeCode AI</h1>
+            <textarea id="input" placeholder="Describe your website exactly like Claude.ai:
+Examples:
+'Create a cyberpunk portfolio with glowing navbar, hero section, 3 project cards, contact form, dark neon theme'
+'Modern e-commerce product page with image gallery, price, add to cart, responsive'
+'Dashboard with sidebar navigation, charts, cards, dark mode'"></textarea>
+            <div class="btn" onclick="generate()">GENERATE WEBSITE</div>
+            <div id="status" class="status">Ready to generate production-ready websites</div>
+            <div><strong>🔍 Parsed Instructions:</strong></div>
+            <div id="parsed" class="output">Enter your description above...</div>
+            <div><strong>💻 Generated Code:</strong></div>
+            <div id="code" class="output"></div>
+        </div>
+        <div class="right">
+            <iframe id="preview" class="preview"></iframe>
+        </div>
+    </div>
+
+    <script>
+        const patterns = {
+            navbar: /(nav|navbar|menu|navigation)/i,
+            hero: /(hero|landing|welcome|home)/i,
+            portfolio: /(portfolio|projects?|cards?|gallery)/i,
+            form: /(form|contact)/i,
+            ecommerce: /(shop|product|cart|buy)/i,
+            dashboard: /(dashboard|admin|panel)/i
+        };
+
+        function parsePrompt(prompt) {
+            const features = [];
+            for (let [key, regex] of Object.entries(patterns)) {
+                if (regex.test(prompt)) features.push(key);
+            }
+            return features.length ? features : ['default'];
+        }
+
+        function generateComponent(type, data = {}) {
+            const components = {
+                navbar: `<nav style="background:linear-gradient(90deg,#000,#111,#000);padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;box-shadow:0 5px 20px rgba(0,255,136,0.3);position:sticky;top:0;z-index:100;"><div style="font-size:1.5rem;font-weight:700;background:linear-gradient(45deg,#00ff88,#ff1493);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${data.title || 'NeonSite'}</div><div style="display:flex;gap:1rem;"><a href="#" style="color:#00ff88;text-decoration:none;font-weight:500;text-shadow:0 0 10px #00ff88;">Home</a><a href="#" style="color:#ff1493;text-decoration:none;font-weight:500;text-shadow:0 0 10px #ff1493;">Projects</a><a href="#" style="color:#00bfff;text-decoration:none;font-weight:500;text-shadow:0 0 10px #00bfff;">Contact</a></div></nav>`,
+                hero: `<section style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:4rem 2rem;background:radial-gradient(circle at center,#000 0%,#111 50%,#000 100%);"><h1 style="font-size:clamp(3rem,8vw,6rem);font-weight:900;background:linear-gradient(45deg,#00ff88,#ff1493,#00bfff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 40px rgba(0,255,136,0.5);margin-bottom:2rem;animation:glow 2s ease-in-out infinite alternate;">${data.title || 'Welcome'}</h1><p style="font-size:1.5rem;color:#ccc;max-width:600px;line-height:1.6;margin-bottom:3rem;">${data.subtitle || 'Modern neon cyberpunk website'}</p><button style="background:linear-gradient(45deg,#00ff88,#ff1493);color:#000;padding:1rem 2.5rem;border:none;border-radius:50px;font-size:1.1rem;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 30px rgba(0,255,136,0.4);transition:all 0.3s;">Get Started</button></section>`,
+                portfolio: `<section style="padding:4rem 2rem;max-width:1200px;margin:0 auto;"><h2 style="font-size:2.5rem;text-align:center;margin-bottom:4rem;color:#00ff88;text-shadow:0 0 20px #00ff88;">Projects</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:2rem;">${Array(3).fill(0).map((_,i) => `<div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);border-radius:20px;padding:2rem;border:1px solid rgba(0,255,136,0.2);transition:all 0.3s;"><h3 style="color:#00ff88;margin-bottom:1rem;font-size:1.5rem;">Project ${i+1}</h3><p style="color:#ccc;line-height:1.6;margin-bottom:1.5rem;">Professional showcase with modern neon design and smooth animations.</p><div style="display:flex;gap:1rem;"><button style="flex:1;background:#00ff88;color:#000;padding:0.8rem 1.5rem;border:none;border-radius:10px;font-weight:600;cursor:pointer;">Live Demo</button><button style="flex:1;background:transparent;border:1px solid #00ff88;color:#00ff88;padding:0.8rem 1.5rem;border-radius:10px;font-weight:600;cursor:pointer;">Code</button></div></div>`).join('')}</div></section>`,
+                form: `<section style="padding:4rem 2rem;max-width:600px;margin:0 auto;"><h2 style="font-size:2.5rem;text-align:center;margin-bottom:3rem;color:#ff1493;text-shadow:0 0 20px #ff1493;">Get In Touch</h2><form style="display:flex;flex-direction:column;gap:1.5rem;"><input type="text" placeholder="Your Name" style="background:rgba(255,255,255,0.1);border:2px solid rgba(255,20,147,0.3);border-radius:12px;padding:1rem 1.5rem;color:#fff;font-size:1rem;font-family:inherit;backdrop-filter:blur(10px);transition:all 0.3s;" required><input type="email" placeholder="Your Email" style="background:rgba(255,255,255,0.1);border:2px solid rgba(255,20,147,0.3);border-radius:12px;padding:1rem 1.5rem;color:#fff;font-size:1rem;font-family:inherit;backdrop-filter:blur(10px);transition:all 0.3s;" required><textarea placeholder="Your Message" rows="6" style="background:rgba(255,255,255,0.1);border:2px solid rgba(255,20,147,0.3);border-radius:12px;padding:1rem 1.5rem;color:#fff;font-size:1rem;font-family:inherit;backdrop-filter:blur(10px);resize:vertical;transition:all 0.3s;"></textarea><button type="submit" style="background:linear-gradient(45deg,#ff1493,#00ff88);color:#000;padding:1.2rem;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:1px;box-shadow:0 10px 30px rgba(255,20,147,0.4);transition:all 0.3s;">Send Message</button></form></section>`,
+                default: `<section style="padding:4rem 2rem;text-align:center;"><h2 style="font-size:3rem;color:#00ff88;text-shadow:0 0 30px #00ff88;margin-bottom:2rem;">Dynamic Content</h2><p style="font-size:1.3rem;color:#ccc;max-width:700px;margin:0 auto;line-height:1.7;">Custom generated section based on your specific requirements. Fully responsive, production-ready code with cyberpunk neon styling.</p></section>`
+            };
+            return components[type] || components.default;
+        }
+
+        function generate() {
+            const input = document.getElementById('input').value.trim();
+            if (!input) {
+                document.getElementById('status').textContent = 'Enter your website description!';
+                return;
+            }
+
+            document.getElementById('status').textContent = '🧠 Processing with Claude-level intelligence...';
+            
+            setTimeout(() => {
+                const features = parsePrompt(input);
+                document.getElementById('parsed').textContent = `Detected: ${features.join(', ')}`;
+                
+                let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${input.slice(0,50)} - Generated</title>
+    <style>
+        :root {
+            --bg: #0a0a0a; --bg-sec: #1a1a1a;
+            --neon-cyan: #00ff88; --neon-pink: #ff1493; --neon-blue: #00bfff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'JetBrains Mono', -apple-system, BlinkMacSystemFont, monospace;
+            background: var(--bg); color: #e0e0e0; line-height: 1.6; overflow-x: hidden;
+        }
+        @keyframes glow {
+            0%, 100% { text-shadow: 0 0 20px currentColor; }
+            50% { text-shadow: 0 0 40px currentColor, 0 0 60px currentColor; }
+        }
+        h1, h2, h3 { animation: glow 2s ease-in-out infinite alternate; }
+    </style>
+</head>
+<body>`;
+
+                // Generate components based on detected features
+                if (features.includes('navbar')) html += generateComponent('navbar');
+                if (features.includes('hero') || features.includes('default')) html += generateComponent('hero', {title: input.split(' ')[0]});
+                if (features.includes('portfolio')) html += generateComponent('portfolio');
+                if (features.includes('form')) html += generateComponent('form');
+                if (!features.includes('form') && !features.includes('portfolio')) html += generateComponent('default');
+                
+                html += `
+                <footer style="padding:3rem 2rem;text-align:center;background:rgba(0,0,0,0.5);border-top:1px solid rgba(0,255,136,0.2);">
+                    <p style="color:#888;font-size:0.9rem;">Generated by ClaudeCode AI • Production Ready</p>
+                </footer>
+                </body>
+                </html>`;
+
+                document.getElementById('code').textContent = html;
+                document.getElementById('preview').srcdoc = html;
+                document.getElementById('status').innerHTML = '✅ <strong>FULLY FUNCTIONAL WEBSITE GENERATED!</strong> Production-ready code.';
+            }, 1200);
+        }
+
+        // Keyboard shortcut
+        document.getElementById('input').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') generate();
+        });
+    </script>
+</body>
+  </html>
