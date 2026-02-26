@@ -1,249 +1,173 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>VS Code Style Playground – Dark Theme</title>
-  
-  <!-- Monaco Editor from CDN -->
-  <link rel="stylesheet" data-name="vs/dark" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.css" />
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
-  
+  <title>Simple Head Swap – Browser Only</title>
   <style>
-    :root {
-      --bg: #1e1e1e;
-      --editor-bg: #1e1e1e;
-      --tab-bg: #252526;
-      --tab-active: #007acc;
-      --text: #d4d4d4;
-      --border: #444;
-    }
-    
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    
-    header {
-      background: #007acc;
-      color: white;
-      padding: 8px 16px;
-      font-size: 1.1rem;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      border-bottom: 1px solid #005a9e;
-    }
-    
-    .tabs {
-      background: var(--tab-bg);
-      display: flex;
-      border-bottom: 1px solid var(--border);
-    }
-    
-    .tab {
-      padding: 10px 20px;
-      cursor: pointer;
-      background: var(--tab-bg);
-      border: none;
-      color: var(--text);
-      border-bottom: 3px solid transparent;
-      transition: all 0.15s;
-    }
-    
-    .tab.active {
-      background: var(--editor-bg);
-      border-bottom: 3px solid var(--tab-active);
-      color: white;
-    }
-    
-    .main {
-      flex: 1;
-      display: flex;
-      overflow: hidden;
-    }
-    
-    .editor-area {
-      width: 50%;
-      display: flex;
-      flex-direction: column;
-      border-right: 1px solid var(--border);
-    }
-    
-    .editor-container {
-      flex: 1;
-      position: relative;
-    }
-    
-    #preview {
-      width: 50%;
-      background: white;
-      border: none;
-      resize: none;
-    }
-    
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: white;
-    }
-    
-    @media (max-width: 900px) {
-      .main { flex-direction: column; }
-      .editor-area, #preview { width: 100%; height: 50%; }
-      .editor-area { border-right: none; border-bottom: 1px solid var(--border); }
-    }
+    body { font-family: Arial; text-align: center; background: #111; color: #eee; }
+    canvas, video { max-width: 100%; margin: 10px; border: 2px solid #444; }
+    button { padding: 12px 24px; margin: 8px; font-size: 1.1em; cursor: pointer; }
+    #controls { margin: 20px; }
   </style>
 </head>
 <body>
 
-<header>VS Code Style Playground – Dark & Attractive</header>
+<h2>Very Simple Browser Head Swap (not realistic – just demo)</h2>
 
-<div class="tabs">
-  <button class="tab active" data-lang="html">HTML</button>
-  <button class="tab" data-lang="css">CSS</button>
-  <button class="tab" data-lang="javascript">JavaScript</button>
+<div>
+  <label>Target photo (person whose head we keep):</label><br>
+  <input type="file" id="targetInput" accept="image/*">
 </div>
 
-<div class="main">
-  <div class="editor-area">
-    <div id="html-editor" class="editor-container"></div>
-    <div id="css-editor"  class="editor-container" style="display:none;"></div>
-    <div id="js-editor"   class="editor-container" style="display:none;"></div>
-  </div>
-  
-  <div id="preview">
-    <iframe id="preview-frame" sandbox="allow-scripts"></iframe>
-  </div>
+<div>
+  <label>Swap head from this photo:</label><br>
+  <input type="file" id="sourceInput" accept="image/*">
 </div>
 
+<div id="controls">
+  <button onclick="doSwap()">Swap Heads</button>
+  <button onclick="reset()">Reset</button>
+</div>
+
+<canvas id="output" width="800" height="600"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14"></script>
 <script>
-// Configure Monaco to load from CDN
-require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' } });
+// ────────────────────────────────────────────────
+const { FaceLandmarker, FilesetResolver, DrawingUtils } = window.vision;
 
-require(['vs/editor/editor.main'], function () {
-  // Create editors
-  const htmlEditor = monaco.editor.create(document.getElementById('html-editor'), {
-    value: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>My Page</title>
-</head>
-<body>
-  <h1>Hello World 🌙</h1>
-  <p>Edit me and see magic on the right →</p>
-  <button onclick="sayHi()">Click me</button>
-</body>
-</html>`.trim(),
-    language: 'html',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    fontSize: 15,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
+let faceLandmarker;
+let targetImg = new Image();
+let sourceImg = new Image();
+const canvas = document.getElementById("output");
+const ctx = canvas.getContext("2d");
+const drawingUtils = new DrawingUtils(ctx);
+
+async function init() {
+  const fileset = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+  );
+
+  faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+      delegate: "GPU"   // try "CPU" if GPU fails
+    },
+    outputFaceBlendshapes: false,
+    outputFacialTransformationMatrixes: false,
+    runningMode: "IMAGE",
+    numFaces: 1
   });
 
-  const cssEditor = monaco.editor.create(document.getElementById('css-editor'), {
-    value: `body {
-  font-family: system-ui, sans-serif;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  text-align: center;
-  padding: 50px;
+  console.log("MediaPipe Face Landmarker ready");
 }
 
-h1 {
-  font-size: 3.5rem;
-  margin-bottom: 1rem;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+init();
+
+// ────────────────────────────────────────────────
+document.getElementById("targetInput").onchange = e => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = ev => { targetImg.src = ev.target.result; };
+  reader.readAsDataURL(file);
+};
+
+document.getElementById("sourceInput").onchange = e => {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = ev => { sourceImg.src = ev.target.result; };
+  reader.readAsDataURL(file);
+};
+
+// ────────────────────────────────────────────────
+async function detectLandmarks(img) {
+  const mpImage = await createImageBitmap(await (await fetch(img.src)).blob());
+  const results = await faceLandmarker.detect(mpImage);
+  return results.faceLandmarks?.[0] || null;
 }
 
-button {
-  padding: 12px 28px;
-  font-size: 1.2rem;
-  background: #ff6b6b;
-  border: none;
-  border-radius: 50px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.3s;
+function getHeadBox(landmarks) {
+  if (!landmarks) return null;
+  let minX = 1, maxX = 0, minY = 1, maxY = 0;
+  // Use jaw + forehead landmarks roughly
+  const indices = [10, 151, 9, 8, 168, 6, 197, 195, 5, 4, 1, 2, 0, 17, 18, 200, 199, 175];
+  indices.forEach(i => {
+    const lm = landmarks[i];
+    if (lm) {
+      minX = Math.min(minX, lm.x);
+      maxX = Math.max(maxX, lm.x);
+      minY = Math.min(minY, lm.y);
+      maxY = Math.max(maxY, lm.y);
+    }
+  });
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
 }
 
-button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(255,107,107,0.4);
-}`.trim(),
-    language: 'css',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    fontSize: 15,
-    minimap: { enabled: false },
-  });
+async function doSwap() {
+  if (!targetImg.complete || !sourceImg.complete) {
+    alert("Load both images first");
+    return;
+  }
 
-  const jsEditor = monaco.editor.create(document.getElementById('js-editor'), {
-    value: `function sayHi() {
-  alert("Hello from your dark & beautiful playground! 🚀");
-}`,
-    language: 'javascript',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    fontSize: 15,
-    minimap: { enabled: false },
-  });
+  canvas.width = targetImg.width;
+  canvas.height = targetImg.height;
+  ctx.drawImage(targetImg, 0, 0);
 
-  // Tab switching
-  const tabs = document.querySelectorAll('.tab');
-  const editors = {
-    html: { editor: htmlEditor, container: document.getElementById('html-editor') },
-    css:  { editor: cssEditor,  container: document.getElementById('css-editor')  },
-    javascript: { editor: jsEditor, container: document.getElementById('js-editor') }
-  };
+  const targetLm = await detectLandmarks(targetImg);
+  const sourceLm = await detectLandmarks(sourceImg);
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      Object.values(editors).forEach(e => e.container.style.display = 'none');
-      editors[tab.dataset.lang].container.style.display = 'block';
-    });
-  });
+  if (!targetLm || !sourceLm) {
+    alert("Could not detect face in one or both photos");
+    return;
+  }
 
-  // Live preview update
-  const previewFrame = document.getElementById('preview-frame');
-  const updatePreview = () => {
-    const html = htmlEditor.getValue();
-    const css  = `<style>${cssEditor.getValue()}</style>`;
-    const js   = `<script>${jsEditor.getValue()}<\/script>`;
-    
-    const fullDoc = html.replace('</head>', css + '</head>').replace('</body>', js + '</body>');
-    
-    previewFrame.srcdoc = fullDoc;
-  };
+  const targetHead = getHeadBox(targetLm);
+  const sourceHead = getHeadBox(sourceLm);
 
-  // Update on every change (with small debounce for performance)
-  let timeout;
-  [htmlEditor, cssEditor, jsEditor].forEach(ed => {
-    ed.onDidChangeModelContent(() => {
-      clearTimeout(timeout);
-      timeout = setTimeout(updatePreview, 300);
-    });
-  });
+  if (!targetHead || !sourceHead) return;
 
-  // Initial render
-  updatePreview();
-});
+  // Very naive affine transform – centers + scale only
+  const sx = targetHead.w / sourceHead.w;
+  const sy = targetHead.h / sourceHead.h;
+  const scale = (sx + sy) / 2 * 1.1; // slight oversize
+
+  const tx = targetHead.x + targetHead.w/2;
+  const ty = targetHead.y + targetHead.h/2;
+
+  const sxSrc = sourceHead.x + sourceHead.w/2;
+  const sySrc = sourceHead.y + sourceHead.h/2;
+
+  ctx.save();
+  ctx.translate(tx * canvas.width, ty * canvas.height);
+  ctx.scale(scale, scale);
+  ctx.translate(-sxSrc * sourceImg.width, -sySrc * sourceImg.height);
+
+  // Draw source head
+  ctx.drawImage(sourceImg,
+    (sourceHead.x - 0.1) * sourceImg.width,
+    (sourceHead.y - 0.15) * sourceImg.height,
+    sourceHead.w * 1.2 * sourceImg.width,
+    sourceHead.h * 1.4 * sourceImg.height,
+    0, 0,
+    sourceHead.w * 1.2 * sourceImg.width,
+    sourceHead.h * 1.4 * sourceImg.height
+  );
+
+  ctx.restore();
+
+  // Very crude feathering attempt
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.beginPath();
+  ctx.arc(tx * canvas.width, ty * canvas.height, Math.min(targetHead.w, targetHead.h) * canvas.width * 0.45, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.globalCompositeOperation = "source-over";
+  alert("Very basic head paste done (quality is low – this is browser limit)");
+}
+
+function reset() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
 </script>
-
 </body>
-    </html>
+  </html>
