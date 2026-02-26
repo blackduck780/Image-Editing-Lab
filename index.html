@@ -2,171 +2,198 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Simple Head Swap – Browser Only</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Head Swap Demo – Browser Only</title>
   <style>
-    body { font-family: Arial; text-align: center; background: #111; color: #eee; }
-    canvas, video { max-width: 100%; margin: 10px; border: 2px solid #444; }
-    button { padding: 12px 24px; margin: 8px; font-size: 1.1em; cursor: pointer; }
-    #controls { margin: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { color: #58a6ff; }
+    .container { max-width: 900px; margin: 0 auto; }
+    input, button { margin: 10px; padding: 10px; font-size: 1em; }
+    canvas { 
+      max-width: 100%; 
+      border: 2px solid #30363d; 
+      background: #161b22; 
+      border-radius: 8px; 
+    }
+    #status { color: #f85149; font-weight: bold; margin: 10px; }
   </style>
 </head>
 <body>
 
-<h2>Very Simple Browser Head Swap (not realistic – just demo)</h2>
+<div class="container">
+  <h1>Simple Head Swap (Browser-Only Demo)</h1>
+  <p>Upload two photos → click "Swap Heads". Results are basic (not realistic deepfake).</p>
 
-<div>
-  <label>Target photo (person whose head we keep):</label><br>
-  <input type="file" id="targetInput" accept="image/*">
+  <div>
+    <label>Target Image (body we keep):</label><br>
+    <input type="file" id="targetFile" accept="image/*">
+  </div>
+
+  <div>
+    <label>Source Image (head to swap in):</label><br>
+    <input type="file" id="sourceFile" accept="image/*">
+  </div>
+
+  <div>
+    <button onclick="swapHeads()">Swap Heads</button>
+    <button onclick="resetCanvas()">Reset</button>
+  </div>
+
+  <div id="status"></div>
+  <canvas id="canvas" width="800" height="600"></canvas>
 </div>
-
-<div>
-  <label>Swap head from this photo:</label><br>
-  <input type="file" id="sourceInput" accept="image/*">
-</div>
-
-<div id="controls">
-  <button onclick="doSwap()">Swap Heads</button>
-  <button onclick="reset()">Reset</button>
-</div>
-
-<canvas id="output" width="800" height="600"></canvas>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14"></script>
 <script>
-// ────────────────────────────────────────────────
-const { FaceLandmarker, FilesetResolver, DrawingUtils } = window.vision;
-
+// Global vars
+const { FaceLandmarker, FilesetResolver } = window.vision;
 let faceLandmarker;
 let targetImg = new Image();
 let sourceImg = new Image();
-const canvas = document.getElementById("output");
+const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const drawingUtils = new DrawingUtils(ctx);
+const status = document.getElementById("status");
 
-async function init() {
+async function initMediaPipe() {
+  status.textContent = "Loading MediaPipe model...";
   const fileset = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
   );
 
   faceLandmarker = await FaceLandmarker.createFromOptions(fileset, {
     baseOptions: {
-      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-      delegate: "GPU"   // try "CPU" if GPU fails
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+      delegate: "GPU"  // fallback to CPU if needed
     },
-    outputFaceBlendshapes: false,
-    outputFacialTransformationMatrixes: false,
     runningMode: "IMAGE",
     numFaces: 1
   });
 
-  console.log("MediaPipe Face Landmarker ready");
+  status.textContent = "Model ready! Upload images.";
 }
 
-init();
+initMediaPipe().catch(err => {
+  status.textContent = "Error loading model: " + err.message;
+});
 
-// ────────────────────────────────────────────────
-document.getElementById("targetInput").onchange = e => {
+// Load images
+document.getElementById("targetFile").onchange = e => {
   const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = ev => { targetImg.src = ev.target.result; };
-  reader.readAsDataURL(file);
+  if (!file) return;
+  targetImg.src = URL.createObjectURL(file);
+  targetImg.onload = () => status.textContent = "Target image loaded.";
 };
 
-document.getElementById("sourceInput").onchange = e => {
+document.getElementById("sourceFile").onchange = e => {
   const file = e.target.files[0];
-  const reader = new FileReader();
-  reader.onload = ev => { sourceImg.src = ev.target.result; };
-  reader.readAsDataURL(file);
+  if (!file) return;
+  sourceImg.src = URL.createObjectURL(file);
+  sourceImg.onload = () => status.textContent = "Source image loaded.";
 };
 
-// ────────────────────────────────────────────────
-async function detectLandmarks(img) {
-  const mpImage = await createImageBitmap(await (await fetch(img.src)).blob());
-  const results = await faceLandmarker.detect(mpImage);
+// Detect landmarks helper
+async function getFaceLandmarks(img) {
+  if (!faceLandmarker) return null;
+  const bitmap = await createImageBitmap(img);
+  const results = await faceLandmarker.detect(bitmap);
   return results.faceLandmarks?.[0] || null;
 }
 
-function getHeadBox(landmarks) {
-  if (!landmarks) return null;
+// Rough head bounding box from landmarks
+function getHeadBounds(landmarks) {
+  if (!landmarks?.length) return null;
   let minX = 1, maxX = 0, minY = 1, maxY = 0;
-  // Use jaw + forehead landmarks roughly
-  const indices = [10, 151, 9, 8, 168, 6, 197, 195, 5, 4, 1, 2, 0, 17, 18, 200, 199, 175];
-  indices.forEach(i => {
-    const lm = landmarks[i];
-    if (lm) {
-      minX = Math.min(minX, lm.x);
-      maxX = Math.max(maxX, lm.x);
-      minY = Math.min(minY, lm.y);
-      maxY = Math.max(maxY, lm.y);
+  // Jaw + forehead + ears approx
+  [0,1,2,3,4,5,6,7,8,9,10,151,168,6,197,5,4].forEach(i => {
+    const p = landmarks[i];
+    if (p) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
     }
   });
-  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  return {
+    x: minX, y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
 }
 
-async function doSwap() {
+async function swapHeads() {
   if (!targetImg.complete || !sourceImg.complete) {
-    alert("Load both images first");
+    status.textContent = "Load both images first!";
     return;
   }
+
+  status.textContent = "Detecting faces...";
 
   canvas.width = targetImg.width;
   canvas.height = targetImg.height;
   ctx.drawImage(targetImg, 0, 0);
 
-  const targetLm = await detectLandmarks(targetImg);
-  const sourceLm = await detectLandmarks(sourceImg);
+  const targetLm = await getFaceLandmarks(targetImg);
+  const sourceLm = await getFaceLandmarks(sourceImg);
 
   if (!targetLm || !sourceLm) {
-    alert("Could not detect face in one or both photos");
+    status.textContent = "Face not detected in one or both images!";
     return;
   }
 
-  const targetHead = getHeadBox(targetLm);
-  const sourceHead = getHeadBox(sourceLm);
+  const targetBox = getHeadBounds(targetLm);
+  const sourceBox = getHeadBounds(sourceLm);
 
-  if (!targetHead || !sourceHead) return;
+  if (!targetBox || !sourceBox) {
+    status.textContent = "Could not estimate head bounds!";
+    return;
+  }
 
-  // Very naive affine transform – centers + scale only
-  const sx = targetHead.w / sourceHead.w;
-  const sy = targetHead.h / sourceHead.h;
-  const scale = (sx + sy) / 2 * 1.1; // slight oversize
+  // Simple scale + position
+  const scaleX = targetBox.width / sourceBox.width;
+  const scaleY = targetBox.height / sourceBox.height;
+  const scale = (scaleX + scaleY) / 2 * 1.15; // slight oversize to cover neck
 
-  const tx = targetHead.x + targetHead.w/2;
-  const ty = targetHead.y + targetHead.h/2;
+  const centerTargetX = (targetBox.x + targetBox.width / 2) * canvas.width;
+  const centerTargetY = (targetBox.y + targetBox.height / 2) * canvas.height;
 
-  const sxSrc = sourceHead.x + sourceHead.w/2;
-  const sySrc = sourceHead.y + sourceHead.h/2;
+  const centerSourceX = (sourceBox.x + sourceBox.width / 2) * sourceImg.width;
+  const centerSourceY = (sourceBox.y + sourceBox.height / 2) * sourceImg.height;
 
   ctx.save();
-  ctx.translate(tx * canvas.width, ty * canvas.height);
+  ctx.translate(centerTargetX, centerTargetY);
   ctx.scale(scale, scale);
-  ctx.translate(-sxSrc * sourceImg.width, -sySrc * sourceImg.height);
+  ctx.translate(-centerSourceX, -centerSourceY);
 
-  // Draw source head
-  ctx.drawImage(sourceImg,
-    (sourceHead.x - 0.1) * sourceImg.width,
-    (sourceHead.y - 0.15) * sourceImg.height,
-    sourceHead.w * 1.2 * sourceImg.width,
-    sourceHead.h * 1.4 * sourceImg.height,
-    0, 0,
-    sourceHead.w * 1.2 * sourceImg.width,
-    sourceHead.h * 1.4 * sourceImg.height
-  );
+  // Draw source head roughly oversized
+  ctx.drawImage(sourceImg, 0, 0);
 
   ctx.restore();
 
-  // Very crude feathering attempt
+  // Crude erase of old head (circle mask)
   ctx.globalCompositeOperation = "destination-out";
   ctx.beginPath();
-  ctx.arc(tx * canvas.width, ty * canvas.height, Math.min(targetHead.w, targetHead.h) * canvas.width * 0.45, 0, Math.PI*2);
+  ctx.arc(centerTargetX, centerTargetY, Math.min(targetBox.width, targetBox.height) * canvas.width * 0.48, 0, Math.PI * 2);
   ctx.fill();
 
+  // Feather edges a bit
   ctx.globalCompositeOperation = "source-over";
-  alert("Very basic head paste done (quality is low – this is browser limit)");
+  ctx.filter = "blur(8px)";
+  ctx.drawImage(canvas, 0, 0); // re-draw with blur for soft seam (hacky)
+
+  ctx.filter = "none";
+
+  status.textContent = "Basic head swap done! (quality limited by browser tech)";
 }
 
-function reset() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function resetCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  status.textContent = "Canvas reset.";
 }
 </script>
 </body>
